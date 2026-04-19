@@ -158,5 +158,40 @@ def analyze_news(ticker: str, lookback_days: int = 7, tier: str = "haiku"):
     asyncio.run(_run())
 
 
+from quant_copilot.agents.decisions import persist_decision
+from quant_copilot.agents.orchestrator import Orchestrator
+
+
+@app.command("analyze")
+def analyze(
+    ticker: str,
+    exchange: str = "NSE",
+    timeframe: str = "swing",
+    tier: str = "sonnet",
+    news_tier: str = "haiku",
+    persist: bool = True,
+):
+    """Run full research via the Orchestrator and print the verdict JSON."""
+    async def _run():
+        settings, engine, sm = _bootstrap()
+        await set_pragmas(engine)
+        layer = build_data_layer(settings, sm)
+        sdk = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        guard = BudgetGuard(sm=sm, daily_cap_inr=settings.daily_llm_budget_inr)
+        client = ClaudeClient(sdk=sdk, sm=sm, usd_to_inr=83.0, budget=guard)
+        verifier = CitationVerifier(sm=sm)
+
+        tech = TechnicalAgent(data=layer, claude=client, tier=tier)
+        fund = FundamentalAgent(data=layer, claude=client, tier=tier)
+        news = NewsAgent(data=layer, claude=client, tier=news_tier, verifier=verifier)
+        orch = Orchestrator(data=layer, claude=client, technical=tech, fundamental=fund,
+                            news=news, tier=tier)
+        report = await orch.research(ticker=ticker, exchange=exchange, timeframe=timeframe)
+        if persist:
+            await persist_decision(sm=sm, report=report)
+        typer.echo(_json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+    asyncio.run(_run())
+
+
 if __name__ == "__main__":
     app()
