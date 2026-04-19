@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
@@ -23,7 +23,9 @@ async def test_nsepython_parses_equity_history_format():
 
 
 async def test_nsetools_quote_shape():
-    with patch("nsetools.Nse.get_quote", return_value={"lastPrice": "2820.5"}):
+    fake = MagicMock()
+    fake.return_value.get_quote.return_value = {"lastPrice": "2820.5"}
+    with patch("nsetools.Nse", fake):
         q = await NsetoolsSource().quote("RELIANCE")
     assert q["ticker"] == "RELIANCE"
     assert q["ltp"] == 2820.5
