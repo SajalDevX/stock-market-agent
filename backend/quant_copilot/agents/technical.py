@@ -1,14 +1,20 @@
 from __future__ import annotations
 
+import json
 import math
+from dataclasses import dataclass
+from datetime import date, timedelta
 from typing import Literal
 
 import pandas as pd
 
+from quant_copilot.agents.claude_client import ClaudeClient
+from quant_copilot.agents.schemas import Evidence, TechnicalReport
 from quant_copilot.analysis.circuit import detect_circuit_state
 from quant_copilot.analysis.indicators import compute_indicators
 from quant_copilot.analysis.liquidity import avg_traded_value, below_liquidity_floor
 from quant_copilot.analysis.patterns import detect_breakout, key_levels
+from quant_copilot.data.layer import DataLayer
 
 
 Timeframe = Literal["intraday", "swing", "long-term"]
@@ -126,3 +132,78 @@ def compute_technical_signals(df: pd.DataFrame, *, timeframe: Timeframe = "swing
         "last_close": close,
         "last_asof": df.index[-1].to_pydatetime(),
     }
+
+
+SYSTEM_PROMPT = """You are the Technical Analyst agent of an Indian equity research assistant.
+
+You receive a structured summary of a stock's technical state (trend, momentum, indicator values, key levels, recent signals). Your job is to produce a concise, evidence-grounded narrative interpretation. Do NOT invent numbers — only reference values given in the input. Do NOT give buy/sell instructions; describe the technical picture and flag the main risks.
+
+Output format (strict): plain prose, 3–5 sentences. No preamble, no disclaimers.
+""".strip()
+
+
+@dataclass
+class TechnicalAgent:
+    data: DataLayer
+    claude: ClaudeClient
+    lookback_days: int = 250
+    tier: str = "sonnet"
+
+    async def analyze(self, *, ticker: str, exchange: str, timeframe: str) -> TechnicalReport:
+        end = date.today()
+        start = end - timedelta(days=self.lookback_days)
+        df = await self.data.get_ohlc_adjusted(ticker, exchange, "1d", start, end)
+
+        sig = compute_technical_signals(df, timeframe=timeframe)  # type: ignore[arg-type]
+
+        evidence: list[Evidence] = []
+        if df.empty or sig.get("last_asof") is None:
+            asof = None
+        else:
+            asof = sig["last_asof"]
+            for key in ("rsi", "macd", "macd_hist", "ema20", "ema50", "ema200", "atr"):
+                v = sig["indicators_tail"].get(key)
+                if v is not None:
+                    evidence.append(Evidence(kind="indicator", label=key.upper(), value=round(v, 4), asof=asof))
+
+        if sig["liquidity_warning"]:
+            return TechnicalReport(
+                score=0.0,
+                reasoning=(
+                    f"{ticker} is below the liquidity floor "
+                    f"(20-day avg traded value insufficient). No technical signal generated."
+                ),
+                evidence=evidence,
+                trend=sig["trend"], momentum=sig["momentum"],
+                key_levels=sig["key_levels"], signals=sig["signals"],
+                liquidity_warning=True, circuit_state=sig["circuit_state"],
+            )
+
+        # Compose compact user message for Claude
+        user_payload = {
+            "ticker": ticker, "exchange": exchange, "timeframe": timeframe,
+            "last_close": sig.get("last_close"),
+            "trend": sig["trend"], "momentum": sig["momentum"],
+            "score": sig["score"], "signals": sig["signals"],
+            "key_levels": sig["key_levels"], "circuit_state": sig["circuit_state"],
+            "indicators_tail": {k: (None if v is None else round(v, 4)) for k, v in sig["indicators_tail"].items()},
+        }
+        user_text = (
+            f"Stock: {ticker} ({exchange}) — timeframe: {timeframe}\n\n"
+            f"Technical state:\n```json\n{json.dumps(user_payload, default=str, indent=2)}\n```\n\n"
+            f"Write the narrative interpretation as specified."
+        )
+        resp = await self.claude.complete(
+            agent_name="technical", tier=self.tier,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_text}],
+        )
+
+        return TechnicalReport(
+            score=float(sig["score"]),
+            reasoning=resp.text.strip(),
+            evidence=evidence,
+            trend=sig["trend"], momentum=sig["momentum"],
+            key_levels=sig["key_levels"], signals=sig["signals"],
+            liquidity_warning=False, circuit_state=sig["circuit_state"],
+        )
