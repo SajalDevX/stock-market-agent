@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Moneycontrol Markets</title>
+    <item>
+      <title>HDFC Bank Q4 profit beats estimates</title>
+      <link>https://example.com/news/hdfcbank-q4</link>
+      <description>HDFC Bank reported Q4 FY26 net profit of ...</description>
+      <pubDate>Sat, 18 Apr 2026 10:15:00 GMT</pubDate>
+      <guid isPermaLink="false">hdfcbank-q4-2026</guid>
+    </item>
+    <item>
+      <title>Reliance Industries announces new JV</title>
+      <link>https://example.com/news/ril-jv</link>
+      <description>Reliance Industries has announced ...</description>
+      <pubDate>Fri, 17 Apr 2026 15:00:00 GMT</pubDate>
+      <guid isPermaLink="false">ril-jv-2026</guid>
+    </item>
+  </channel>
+</rss>
