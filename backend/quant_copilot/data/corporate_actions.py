@@ -54,8 +54,14 @@ def apply_adjustments(df: pd.DataFrame, actions: CorporateActionSet) -> pd.DataF
     if df.empty:
         return df.copy()
     out = df.copy()
+    for col in ("open", "high", "low", "close"):
+        if col in out.columns and out[col].dtype.kind in "iu":
+            out[col] = out[col].astype("float64")
+    idx_tz = getattr(out.index, "tz", None)
     for a in actions.iter_price_affecting():
         ex = pd.Timestamp(a.ex_date)
+        if idx_tz is not None:
+            ex = ex.tz_localize(idx_tz)
         mask = out.index < ex
         pf = a.price_factor
         vf = a.volume_factor
