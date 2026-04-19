@@ -31,3 +31,4 @@ async def test_health_returns_ok(tmp_path):
             assert body["status"] == "ok"
             assert "llm_budget_spent_today" in body
             assert body["daily_cap_inr"] > 0
+            assert body["scheduler_running"] is True

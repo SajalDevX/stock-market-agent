@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlalchemy import text
 
 from quant_copilot.api.deps import BudgetDep, SettingsDep, SmDep
@@ -11,7 +11,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health(settings: SettingsDep, sm: SmDep, budget: BudgetDep) -> HealthResponse:
+async def health(request: Request, settings: SettingsDep, sm: SmDep, budget: BudgetDep) -> HealthResponse:
     db_ok = True
     try:
         async with sm() as s:
@@ -19,9 +19,12 @@ async def health(settings: SettingsDep, sm: SmDep, budget: BudgetDep) -> HealthR
     except Exception:
         db_ok = False
     spent = await budget.spent_today()
+    scheduler = getattr(request.app.state, "scheduler", None)
+    running = bool(scheduler and scheduler.scheduler.running)
     return HealthResponse(
-        status="ok" if db_ok else "degraded",
+        status="ok" if db_ok and running else "degraded",
         db=db_ok,
         llm_budget_spent_today=round(spent, 2),
         daily_cap_inr=float(settings.daily_llm_budget_inr),
+        scheduler_running=running,
     )

@@ -17,6 +17,11 @@ from quant_copilot.config import Settings, get_settings
 from quant_copilot.data.layer import build_data_layer
 from quant_copilot.data.macro import MacroData
 from quant_copilot.db import build_engine, build_sessionmaker, set_pragmas
+from quant_copilot.jobs.archival import nightly_archive
+from quant_copilot.jobs.backup import backup_sqlite, prune_backups
+from quant_copilot.jobs.outcomes import compute_outcomes
+from quant_copilot.jobs.scheduler import build_scheduler
+from quant_copilot.jobs.watchlist_poll import poll_watchlist
 from quant_copilot.logging_setup import configure_logging
 
 
@@ -46,9 +51,34 @@ async def lifespan(app: FastAPI):
         data=app.state.layer, claude=app.state.claude,
         technical=tech, fundamental=fund, news=news, macro=macro,
     )
+
+    layer = app.state.layer
+
+    async def _archive():
+        await nightly_archive(sm=sm, fundamentals=layer.fundamentals)
+
+    async def _backup():
+        backup_sqlite(settings.sqlite_path, settings.backup_dir)
+        prune_backups(settings.backup_dir, keep_days=30)
+
+    async def _outcomes():
+        await compute_outcomes(sm=sm, layer=layer)
+
+    async def _watchlist_poll():
+        await poll_watchlist(sm=sm, technical=tech, news=news, news_ingest=None)
+
+    scheduler = build_scheduler(
+        archive=_archive, backup=_backup,
+        outcomes=_outcomes, watchlist_poll=_watchlist_poll,
+        tz=settings.market_tz,
+    )
+    scheduler.start()
+    app.state.scheduler = scheduler
     try:
         yield
     finally:
+        if hasattr(app.state, "scheduler"):
+            app.state.scheduler.shutdown()
         await engine.dispose()
 
 

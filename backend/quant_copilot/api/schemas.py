@@ -25,3 +25,4 @@ class HealthResponse(BaseModel):
     db: bool
     llm_budget_spent_today: float
     daily_cap_inr: float
+    scheduler_running: bool = True
