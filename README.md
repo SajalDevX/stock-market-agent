@@ -43,3 +43,14 @@ uv run pytest -q
 
 All external data access goes through `quant_copilot.data.layer.DataLayer`.
 Agents (plans 2+) must depend on this facade, not on source adapters directly.
+
+## Technical Analyst (v0.2)
+
+After Plan 2:
+
+```bash
+cd backend
+/home/sajal/.local/bin/uv run qc analyze-technical RELIANCE --timeframe swing
+```
+
+Output is a JSON `TechnicalReport` with deterministic trend/momentum/score and a Claude-authored narrative in `reasoning`. All Claude calls are logged to `agent_calls`; the daily cap (default ₹500) is enforced by `BudgetGuard`.
