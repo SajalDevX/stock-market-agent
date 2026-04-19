@@ -71,3 +71,25 @@ uv run qc analyze-news RELIANCE --lookback-days 7
 `qc analyze` runs the Orchestrator: it dispatches Technical + Fundamental + News in parallel, computes conviction deterministically from their signed scores (weights per timeframe in `agents/conviction.py`), surfaces any sign disagreements, asks Claude for the thesis prose, and persists the verdict to the `decisions` table so future evaluation jobs can compute forward-return calibration.
 
 News citations are grounded: every `artifact_id` in the News agent's output must resolve to a real row in `news_articles` or `filings`. Unresolved citations trigger one re-prompt; a second failure raises an error rather than returning hallucinated evidence.
+
+## HTTP API + scheduler (v0.4)
+
+```bash
+cd backend
+uv run qc serve --host 127.0.0.1 --port 8000
+```
+
+Endpoints:
+- `GET  /health` — DB + budget + scheduler status
+- `POST /research` — run the Orchestrator; body `{"ticker": "RELIANCE", "timeframe": "swing"}`
+- `GET  /decisions` — recent verdicts
+- `GET  /decisions/{id}` — a verdict with its computed forward-return outcomes
+- `GET  /watchlist`, `POST /watchlist/{ticker}`, `DELETE /watchlist/{ticker}`
+
+Scheduled jobs (IST, skipping weekends/holidays where appropriate):
+- **23:00** — nightly fundamentals archival
+- **23:30** — SQLite backup + 30-day retention
+- **01:00** — compute 1d/7d/30d forward returns for any eligible decisions
+- **09:00–15:45 Mon-Fri, every 15 min** — lightweight watchlist poll (news + technical)
+
+The Macro agent is now wired into the Orchestrator for swing and long-term timeframes; intraday uses macro but skips fundamentals.
