@@ -54,3 +54,20 @@ cd backend
 ```
 
 Output is a JSON `TechnicalReport` with deterministic trend/momentum/score and a Claude-authored narrative in `reasoning`. All Claude calls are logged to `agent_calls`; the daily cap (default ₹500) is enforced by `BudgetGuard`.
+
+## Full research flow (v0.3)
+
+After Plan 3:
+
+```bash
+cd backend
+uv run qc analyze RELIANCE --timeframe swing
+# per-agent:
+uv run qc analyze-technical RELIANCE
+uv run qc analyze-fundamental RELIANCE
+uv run qc analyze-news RELIANCE --lookback-days 7
+```
+
+`qc analyze` runs the Orchestrator: it dispatches Technical + Fundamental + News in parallel, computes conviction deterministically from their signed scores (weights per timeframe in `agents/conviction.py`), surfaces any sign disagreements, asks Claude for the thesis prose, and persists the verdict to the `decisions` table so future evaluation jobs can compute forward-return calibration.
+
+News citations are grounded: every `artifact_id` in the News agent's output must resolve to a real row in `news_articles` or `filings`. Unresolved citations trigger one re-prompt; a second failure raises an error rather than returning hallucinated evidence.
