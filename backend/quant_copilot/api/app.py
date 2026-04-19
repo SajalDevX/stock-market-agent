@@ -59,11 +59,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings or get_settings()
 
     # Routes are registered by Tasks 3-6.
-    from quant_copilot.api.routes import health, watchlist
+    from quant_copilot.api.routes import decisions, health, watchlist
     app.include_router(health.router)
     app.include_router(watchlist.router)
-    # from quant_copilot.api.routes import research, decisions
+    app.include_router(decisions.router)
+    # from quant_copilot.api.routes import research
     # app.include_router(research.router)
-    # app.include_router(decisions.router)
 
     return app
