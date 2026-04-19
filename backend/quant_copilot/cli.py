@@ -193,5 +193,15 @@ def analyze(
     asyncio.run(_run())
 
 
+import uvicorn
+
+
+@app.command("serve")
+def serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False):
+    """Run the HTTP API (FastAPI + scheduler) with uvicorn."""
+    uvicorn.run("quant_copilot.api.app:create_app", host=host, port=port,
+                reload=reload, factory=True)
+
+
 if __name__ == "__main__":
     app()
