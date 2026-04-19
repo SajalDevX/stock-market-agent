@@ -46,11 +46,15 @@ class ClaudeClient:
         sm: async_sessionmaker[AsyncSession],
         usd_to_inr: float = 83.0,
         default_max_tokens: int = 2048,
+        budget=None,
+        min_projected_cost_inr: float = 2.0,
     ) -> None:
         self._sdk = sdk
         self._sm = sm
         self._usd_to_inr = usd_to_inr
         self._default_max_tokens = default_max_tokens
+        self._budget = budget
+        self._min_projected = min_projected_cost_inr
 
     async def complete(
         self,
@@ -62,6 +66,8 @@ class ClaudeClient:
         cache_system: bool = True,
         max_tokens: int | None = None,
     ) -> LLMResponse:
+        if self._budget is not None:
+            await self._budget.check(projected_cost_inr=self._min_projected)
         model = MODEL_ID[tier]
         sys_param: list[dict] | str
         if cache_system and system:

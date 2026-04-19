@@ -85,3 +85,31 @@ async def test_prompt_caching_wraps_system(sm):
     assert isinstance(sys_param, list)
     assert sys_param[0]["type"] == "text"
     assert sys_param[0]["cache_control"] == {"type": "ephemeral"}
+
+
+from quant_copilot.agents.budget import BudgetGuard, BudgetExceeded
+
+
+async def test_claude_client_refuses_when_budget_exceeded(sm):
+    # Seed a call that puts us right at the cap
+    from quant_copilot.models import AgentCall
+    from datetime import datetime, timezone
+    async with sm() as s:
+        s.add(AgentCall(agent="x", input_hash="h", model="m",
+                        input_tokens=1, output_tokens=1, cost_inr=499.5,
+                        latency_ms=1, error=None,
+                        created_at=datetime.now(tz=timezone.utc)))
+        await s.commit()
+
+    sdk = MagicMock()
+    sdk.messages.create = AsyncMock(return_value=_fake_message("nope", 10, 5))
+    guard = BudgetGuard(sm=sm, daily_cap_inr=500)
+    client = ClaudeClient(sdk=sdk, sm=sm, usd_to_inr=83.0, budget=guard,
+                          min_projected_cost_inr=5.0)
+
+    with pytest.raises(BudgetExceeded):
+        await client.complete(
+            agent_name="technical", tier="sonnet",
+            system="s", messages=[{"role": "user", "content": "x"}],
+        )
+    sdk.messages.create.assert_not_called()
