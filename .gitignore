@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+
+# Data + secrets
+backend/.env
+backend/data/
+backend/backups/
+backend/quant_copilot.db*
+*.parquet
+
+# Node (future)
+node_modules/
+.next/
+.turbo/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
