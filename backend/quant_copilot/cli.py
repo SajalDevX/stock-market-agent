@@ -118,5 +118,24 @@ def analyze_technical(
     asyncio.run(_run())
 
 
+from quant_copilot.agents.fundamental import FundamentalAgent
+
+
+@app.command("analyze-fundamental")
+def analyze_fundamental(ticker: str, tier: str = "sonnet"):
+    """Run the Fundamental Analyst agent on a ticker."""
+    async def _run():
+        settings, engine, sm = _bootstrap()
+        await set_pragmas(engine)
+        layer = build_data_layer(settings, sm)
+        sdk = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        guard = BudgetGuard(sm=sm, daily_cap_inr=settings.daily_llm_budget_inr)
+        client = ClaudeClient(sdk=sdk, sm=sm, usd_to_inr=83.0, budget=guard)
+        agent = FundamentalAgent(data=layer, claude=client, tier=tier)
+        report = await agent.analyze(ticker=ticker)
+        typer.echo(_json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+    asyncio.run(_run())
+
+
 if __name__ == "__main__":
     app()
