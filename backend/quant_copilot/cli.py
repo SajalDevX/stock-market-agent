@@ -13,6 +13,15 @@ from quant_copilot.jobs.archival import nightly_archive
 from quant_copilot.jobs.backup import backup_sqlite, prune_backups
 from quant_copilot.logging_setup import configure_logging
 
+import json as _json
+import os
+
+from anthropic import AsyncAnthropic
+
+from quant_copilot.agents.budget import BudgetGuard
+from quant_copilot.agents.claude_client import ClaudeClient
+from quant_copilot.agents.technical import TechnicalAgent
+
 
 app = typer.Typer(help="Quant Copilot command line")
 
@@ -85,6 +94,28 @@ def backup(keep_days: int = 30):
     out = backup_sqlite(settings.sqlite_path, settings.backup_dir)
     prune_backups(settings.backup_dir, keep_days=keep_days)
     typer.echo(f"Backup written to {out}")
+
+
+@app.command("analyze-technical")
+def analyze_technical(
+    ticker: str,
+    exchange: str = "NSE",
+    timeframe: str = "swing",
+    tier: str = "sonnet",
+):
+    """Run the Technical Analyst agent on a ticker and print the report JSON."""
+    async def _run():
+        settings, engine, sm = _bootstrap()
+        await set_pragmas(engine)
+        layer = build_data_layer(settings, sm)
+        sdk = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        guard = BudgetGuard(sm=sm, daily_cap_inr=settings.daily_llm_budget_inr)
+        client = ClaudeClient(sdk=sdk, sm=sm, usd_to_inr=83.0, budget=guard,
+                              min_projected_cost_inr=2.0)
+        agent = TechnicalAgent(data=layer, claude=client, tier=tier)
+        report = await agent.analyze(ticker=ticker, exchange=exchange, timeframe=timeframe)
+        typer.echo(_json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+    asyncio.run(_run())
 
 
 if __name__ == "__main__":
