@@ -137,5 +137,26 @@ def analyze_fundamental(ticker: str, tier: str = "sonnet"):
     asyncio.run(_run())
 
 
+from quant_copilot.agents.citations import CitationVerifier
+from quant_copilot.agents.news import NewsAgent
+
+
+@app.command("analyze-news")
+def analyze_news(ticker: str, lookback_days: int = 7, tier: str = "haiku"):
+    """Run the News agent on a ticker (with citation grounding)."""
+    async def _run():
+        settings, engine, sm = _bootstrap()
+        await set_pragmas(engine)
+        layer = build_data_layer(settings, sm)
+        sdk = AsyncAnthropic(api_key=settings.anthropic_api_key)
+        guard = BudgetGuard(sm=sm, daily_cap_inr=settings.daily_llm_budget_inr)
+        client = ClaudeClient(sdk=sdk, sm=sm, usd_to_inr=83.0, budget=guard)
+        verifier = CitationVerifier(sm=sm)
+        agent = NewsAgent(data=layer, claude=client, tier=tier, verifier=verifier)
+        report = await agent.analyze(ticker=ticker, lookback_days=lookback_days)
+        typer.echo(_json.dumps(report.model_dump(mode="json"), indent=2, default=str))
+    asyncio.run(_run())
+
+
 if __name__ == "__main__":
     app()

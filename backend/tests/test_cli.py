@@ -9,7 +9,7 @@ def test_cli_help_lists_commands():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     for cmd in ("fetch-ohlc", "ingest-news", "refresh-asm", "archive", "backup",
-                "analyze-technical", "analyze-fundamental"):
+                "analyze-technical", "analyze-fundamental", "analyze-news"):
         assert cmd in result.output
 
 
@@ -24,3 +24,10 @@ def test_analyze_fundamental_help():
     result = runner.invoke(app, ["analyze-fundamental", "--help"])
     assert result.exit_code == 0
     assert "TICKER" in result.output.upper()
+
+
+def test_analyze_news_help():
+    result = runner.invoke(app, ["analyze-news", "--help"])
+    assert result.exit_code == 0
+    assert "TICKER" in result.output.upper()
+    assert "--lookback-days" in result.output
