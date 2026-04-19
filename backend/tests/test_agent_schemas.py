@@ -100,3 +100,15 @@ def test_disagreement_names_conflicting_agents():
     d = Disagreement(between=["technical", "news"],
                      summary="Technicals bullish, news flags probe.")
     assert sorted(d.between) == ["news", "technical"]
+
+
+from quant_copilot.agents.schemas import MacroReport
+
+
+def test_macro_report_basic():
+    r = MacroReport(
+        score=0.3, reasoning="Positive cues.", evidence=[],
+        regime="bullish", tailwinds=["positive US cues"], headwinds=[],
+    )
+    assert r.agent == "macro"
+    assert r.regime == "bullish"

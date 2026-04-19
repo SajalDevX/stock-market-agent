@@ -85,6 +85,13 @@ class Disagreement(BaseModel):
     summary: str
 
 
+class MacroReport(AgentReport):
+    agent: Literal["macro"] = "macro"
+    regime: Literal["bullish", "neutral", "bearish"]
+    tailwinds: list[str]
+    headwinds: list[str]
+
+
 class OrchestratorReport(BaseModel):
     model_config = ConfigDict(extra="allow")
     ticker: str
