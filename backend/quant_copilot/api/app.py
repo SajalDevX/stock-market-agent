@@ -9,11 +9,13 @@ from quant_copilot.agents.budget import BudgetGuard
 from quant_copilot.agents.citations import CitationVerifier
 from quant_copilot.agents.claude_client import ClaudeClient
 from quant_copilot.agents.fundamental import FundamentalAgent
+from quant_copilot.agents.macro import MacroAgent
 from quant_copilot.agents.news import NewsAgent
 from quant_copilot.agents.orchestrator import Orchestrator
 from quant_copilot.agents.technical import TechnicalAgent
 from quant_copilot.config import Settings, get_settings
 from quant_copilot.data.layer import build_data_layer
+from quant_copilot.data.macro import MacroData
 from quant_copilot.db import build_engine, build_sessionmaker, set_pragmas
 from quant_copilot.logging_setup import configure_logging
 
@@ -39,9 +41,10 @@ async def lifespan(app: FastAPI):
     tech = TechnicalAgent(data=app.state.layer, claude=app.state.claude)
     fund = FundamentalAgent(data=app.state.layer, claude=app.state.claude)
     news = NewsAgent(data=app.state.layer, claude=app.state.claude, verifier=verifier)
+    macro = MacroAgent(macro_data=MacroData(), claude=app.state.claude)
     app.state.orchestrator = Orchestrator(
         data=app.state.layer, claude=app.state.claude,
-        technical=tech, fundamental=fund, news=news,
+        technical=tech, fundamental=fund, news=news, macro=macro,
     )
     try:
         yield

@@ -123,3 +123,37 @@ async def test_orchestrator_surfaces_disagreement(sm):
     r = await orch.research(ticker="XYZ", exchange="NSE", timeframe="swing")
     assert len(r.disagreements) >= 1
     assert set(r.disagreements[0].between) & {"technical", "fundamental"}
+
+
+async def test_orchestrator_includes_macro_when_available(sm):
+    from unittest.mock import AsyncMock, MagicMock
+    from quant_copilot.agents.macro import MacroAgent
+    from quant_copilot.data.macro import MacroData
+
+    layer = _make_layer(sm, _ohlc_up())
+    md = MagicMock(spec=MacroData)
+    md.snapshot = AsyncMock(return_value={
+        "nifty": {"close": 22500, "change_pct": 0.4},
+        "banknifty": {"close": 49000, "change_pct": 0.6},
+        "global": {"dow": {"close": 38000, "change_pct": 0.3},
+                   "nasdaq": {"close": 16000, "change_pct": 0.2},
+                   "nikkei": {"close": 38000, "change_pct": 0.5},
+                   "crude": {"close": 82, "change_pct": -0.5}},
+        "fx": {"usdinr": {"close": 83.5, "change_pct": 0.0}},
+    })
+    client = MagicMock(spec=ClaudeClient)
+    client.complete = AsyncMock(side_effect=[
+        _resp("Technical."), _resp("Fundamental."), _resp("Macro."),
+        _resp("""```json
+{"thesis":"x","risks":[],"entry":null,"stop":null,"target":null}
+```"""),
+    ])
+    orch = Orchestrator(
+        data=layer, claude=client,
+        technical=TechnicalAgent(data=layer, claude=client),
+        fundamental=FundamentalAgent(data=layer, claude=client),
+        news=NewsAgent(data=layer, claude=client),
+        macro=MacroAgent(macro_data=md, claude=client),
+    )
+    r = await orch.research(ticker="RELIANCE", exchange="NSE", timeframe="swing")
+    assert "macro" in r.agent_reports

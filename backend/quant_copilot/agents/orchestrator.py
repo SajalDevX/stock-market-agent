@@ -9,6 +9,7 @@ from typing import Any
 from quant_copilot.agents.claude_client import ClaudeClient
 from quant_copilot.agents.conviction import compute_conviction
 from quant_copilot.agents.fundamental import FundamentalAgent
+from quant_copilot.agents.macro import MacroAgent
 from quant_copilot.agents.news import NewsAgent
 from quant_copilot.agents.schemas import (
     Disagreement, FundamentalReport, NewsReport, OrchestratorReport, TechnicalReport,
@@ -54,9 +55,9 @@ def _detect_disagreements(scores: dict[str, float]) -> list[Disagreement]:
 
 
 AGENTS_FOR_TIMEFRAME = {
-    "intraday":  ["technical", "news"],
-    "swing":     ["technical", "fundamental", "news"],
-    "long-term": ["technical", "fundamental", "news"],
+    "intraday":  ["technical", "news", "macro"],
+    "swing":     ["technical", "fundamental", "news", "macro"],
+    "long-term": ["technical", "fundamental", "news", "macro"],
 }
 
 
@@ -67,6 +68,7 @@ class Orchestrator:
     technical: TechnicalAgent
     fundamental: FundamentalAgent
     news: NewsAgent
+    macro: MacroAgent | None = None
     tier: str = "sonnet"
 
     async def research(self, *, ticker: str, exchange: str, timeframe: str) -> OrchestratorReport:
@@ -79,6 +81,8 @@ class Orchestrator:
             tasks["fundamental"] = self.fundamental.analyze(ticker=ticker)
         if "news" in agent_names:
             tasks["news"] = self.news.analyze(ticker=ticker)
+        if "macro" in agent_names and self.macro is not None:
+            tasks["macro"] = self.macro.analyze()
 
         results_list = await asyncio.gather(*tasks.values(), return_exceptions=True)
         results: dict[str, Any] = dict(zip(tasks.keys(), results_list))
