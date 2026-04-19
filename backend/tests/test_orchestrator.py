@@ -97,3 +97,29 @@ async def test_orchestrator_intraday_skips_fundamental(sm):
     report = await orch.research(ticker="RELIANCE", exchange="NSE", timeframe="intraday")
     assert "fundamental" not in report.agent_reports
     assert "technical" in report.agent_reports
+
+
+async def test_orchestrator_surfaces_disagreement(sm):
+    # Technical bullish, fundamental bearish (via poor fundamentals)
+    layer = _make_layer(sm, _ohlc_up())
+    layer.fundamentals.get = AsyncMock(return_value={
+        "pe": 95, "roe_pct": 4, "roce_pct": 5, "debt_to_equity": 2.5,
+        "earnings_growth_pct": -15,
+    })
+    client = MagicMock(spec=ClaudeClient)
+    client.complete = AsyncMock(side_effect=[
+        _resp("Technicals bullish."),
+        _resp("Expensive, poor quality, shrinking."),
+        _resp("""```json
+{"thesis":"Tech/fund disagreement.","risks":["fundamental deterioration"],"entry":null,"stop":null,"target":null}
+```"""),
+    ])
+    orch = Orchestrator(
+        data=layer, claude=client,
+        technical=TechnicalAgent(data=layer, claude=client),
+        fundamental=FundamentalAgent(data=layer, claude=client),
+        news=NewsAgent(data=layer, claude=client),
+    )
+    r = await orch.research(ticker="XYZ", exchange="NSE", timeframe="swing")
+    assert len(r.disagreements) >= 1
+    assert set(r.disagreements[0].between) & {"technical", "fundamental"}
