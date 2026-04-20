@@ -195,6 +195,32 @@ def analyze(
 
 import uvicorn
 
+from pathlib import Path as _Path
+
+from quant_copilot.backtest.engine import BacktestEngine
+from quant_copilot.backtest.strategy import Strategy
+
+
+@app.command("backtest")
+def backtest(strategy: str):
+    """Run a backtest from a JSON strategy file and print the summary."""
+    async def _run():
+        settings, engine, sm = _bootstrap()
+        await set_pragmas(engine)
+        layer = build_data_layer(settings, sm)
+        raw = _Path(strategy).read_text()
+        strat = Strategy.model_validate_json(raw)
+        bt = BacktestEngine(layer)
+        result = await bt.run(strat)
+        payload = {
+            "summary": result.summary,
+            "bars_seen": result.bars_seen,
+            "trades": [t.model_dump(mode="json") for t in result.trades],
+            "equity_curve": result.equity_curve,
+        }
+        typer.echo(_json.dumps(payload, indent=2, default=str))
+    asyncio.run(_run())
+
 
 @app.command("serve")
 def serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False):

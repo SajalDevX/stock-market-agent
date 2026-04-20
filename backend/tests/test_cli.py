@@ -10,7 +10,7 @@ def test_cli_help_lists_commands():
     assert result.exit_code == 0
     for cmd in ("fetch-ohlc", "ingest-news", "refresh-asm", "archive", "backup",
                 "analyze-technical", "analyze-fundamental", "analyze-news", "analyze",
-                "serve"):
+                "serve", "backtest"):
         assert cmd in result.output
 
 
@@ -46,3 +46,9 @@ def test_serve_help():
     assert result.exit_code == 0
     assert "--host" in result.output
     assert "--port" in result.output
+
+
+def test_backtest_help():
+    result = runner.invoke(app, ["backtest", "--help"])
+    assert result.exit_code == 0
+    assert "STRATEGY" in result.output.upper()
