@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from anthropic import AsyncAnthropic
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from quant_copilot.agents.budget import BudgetGuard
 from quant_copilot.agents.citations import CitationVerifier
@@ -90,6 +91,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     # Allow tests to inject settings before lifespan runs
     app.state.settings = settings or get_settings()
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+        allow_credentials=False,
+    )
 
     # Routes are registered by Tasks 3-6.
     from quant_copilot.api.routes import decisions, health, research, watchlist
