@@ -7,6 +7,7 @@ export default function Home() {
     { href: "/research" as Route, title: "Research", desc: "Run a full orchestrator pass on a stock." },
     { href: "/watchlist" as Route, title: "Watchlist", desc: "Manage tickers to monitor." },
     { href: "/decisions" as Route, title: "Decisions", desc: "Past verdicts + forward returns." },
+    { href: "/backtest" as Route, title: "Backtest", desc: "Replay a rules-based strategy on historical bars." },
   ];
   return (
     <div className="grid gap-4 md:grid-cols-3">

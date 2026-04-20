@@ -11,6 +11,7 @@ const nav: { href: Route; label: string }[] = [
   { href: "/research" as Route, label: "Research" },
   { href: "/watchlist" as Route, label: "Watchlist" },
   { href: "/decisions" as Route, label: "Decisions" },
+  { href: "/backtest" as Route, label: "Backtest" },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
