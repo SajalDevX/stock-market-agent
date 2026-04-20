@@ -23,6 +23,15 @@ node_modules/
 .next/
 .turbo/
 
+# Ephemeral agent context (not committed)
+.agent-context.md
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+frontend/out/
+
 # OS / IDE
 .DS_Store
 .idea/

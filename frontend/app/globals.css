@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 0 0% 100%;
+  --fg: 222 20% 12%;
+  --muted: 220 10% 46%;
+  --accent: 210 90% 50%;
+  --border: 220 13% 90%;
+  --card: 0 0% 100%;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: 224 18% 10%;
+    --fg: 220 14% 92%;
+    --muted: 220 10% 60%;
+    --accent: 210 90% 60%;
+    --border: 224 16% 20%;
+    --card: 224 16% 14%;
+  }
+}
+
+body {
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
