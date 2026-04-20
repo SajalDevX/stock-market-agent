@@ -117,3 +117,33 @@ The header shows API status and today's LLM spend (₹ spent / daily cap).
 
 Frontend tests: `cd frontend && pnpm test`.
 Backend tests: `cd backend && uv run pytest -q`.
+
+## Backtester (v0.6)
+
+```bash
+# CLI
+cat > /tmp/strategy.json <<'EOF'
+{
+  "ticker": "RELIANCE", "exchange": "NSE",
+  "start": "2024-01-01", "end": "2024-12-31",
+  "initial_capital": 100000,
+  "entry": [{"indicator": "close", "op": ">", "indicator_ref": "ema20"}],
+  "exit":  [{"indicator": "close", "op": "<", "indicator_ref": "ema20"}],
+  "stop_loss_pct": 5, "take_profit_pct": 15, "max_hold_days": 30
+}
+EOF
+uv run qc backtest /tmp/strategy.json | jq .summary
+
+# HTTP
+curl -s -X POST http://localhost:8000/backtest -H 'content-type: application/json' \
+  --data @/tmp/strategy.json | jq .summary
+
+# UI: http://localhost:3000/backtest
+```
+
+Rules supported:
+- Entry: ALL conditions must match. Exit: ANY condition triggers.
+- Implicit guards: `stop_loss_pct`, `take_profit_pct`, `max_hold_days`.
+- Indicators available on each bar: `open`, `high`, `low`, `close`, `volume`, `rsi`, `macd`, `macd_signal`, `macd_hist`, `ema20`, `ema50`, `ema200`, `atr`, `bb_upper`, `bb_mid`, `bb_lower`.
+- Long-only, one position at a time, daily bars. Agent-based backtests and news-keyword conditions are deferred to a later phase (spec §6.4).
+
