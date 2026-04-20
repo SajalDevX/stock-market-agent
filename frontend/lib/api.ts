@@ -1,5 +1,5 @@
 import type {
-  DecisionDetail, DecisionRow, Health, OrchestratorReport,
+  DecisionDetail, DecisionRow, Health, ResearchResponse,
   Timeframe, WatchlistEntry,
 } from "./types";
 
@@ -33,9 +33,9 @@ export const api = {
 
   research: (body: {
     ticker: string; exchange?: string; timeframe: Timeframe;
-    tier?: string; news_tier?: string; persist?: boolean;
+    tier?: string; news_tier?: string; persist?: boolean; include_ohlc?: boolean;
   }) =>
-    request<OrchestratorReport>("/research", {
+    request<ResearchResponse>("/research", {
       method: "POST",
       body: JSON.stringify({ exchange: "NSE", persist: true, ...body }),
     }),

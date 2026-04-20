@@ -13,6 +13,7 @@ class ResearchRequest(BaseModel):
     tier: str = "sonnet"
     news_tier: str = "haiku"
     persist: bool = True
+    include_ohlc: bool = False
 
 
 class WatchlistAddRequest(BaseModel):

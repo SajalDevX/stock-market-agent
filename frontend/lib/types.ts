@@ -118,3 +118,7 @@ export type Health = {
   daily_cap_inr: number;
   scheduler_running: boolean;
 };
+
+export type ResearchResponse = OrchestratorReport & {
+  ohlc?: Array<{ time: number; open: number; high: number; low: number; close: number; volume?: number }>;
+};

@@ -67,3 +67,37 @@ async def test_research_persists_when_flag_set(tmp_path):
             async with sm() as s:
                 rows = (await s.execute(select(Decision))).scalars().all()
             assert len(rows) == 1
+
+
+async def test_research_returns_ohlc_when_flag_set(tmp_path):
+    import pandas as pd
+    from unittest.mock import AsyncMock, MagicMock
+
+    from quant_copilot.agents.schemas import OrchestratorReport
+
+    app = create_app(settings=_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            fake = OrchestratorReport(
+                ticker="RELIANCE", timeframe="swing", verdict="hold", conviction=10,
+                conviction_breakdown={}, thesis="t", risks=[],
+                entry=None, stop=None, target=None, ref_price=2800.0,
+                agent_reports={}, disagreements=[],
+            )
+            app.state.orchestrator = MagicMock()
+            app.state.orchestrator.research = AsyncMock(return_value=fake)
+
+            import numpy as np
+            idx = pd.date_range("2026-01-01", periods=5, freq="B", tz="UTC")
+            df = pd.DataFrame({
+                "open":[1.0]*5,"high":[2.0]*5,"low":[0.5]*5,"close":[1.5]*5,"volume":[10]*5,
+            }, index=idx)
+            app.state.layer.get_ohlc_adjusted = AsyncMock(return_value=df)
+
+            r = await c.post("/research", json={"ticker": "RELIANCE", "timeframe": "swing",
+                                                 "persist": False, "include_ohlc": True})
+            assert r.status_code == 200
+            body = r.json()
+            assert "ohlc" in body
+            assert len(body["ohlc"]) == 5
+            assert body["ohlc"][0]["close"] == 1.5
