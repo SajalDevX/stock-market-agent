@@ -2,6 +2,7 @@ import type {
   DecisionDetail, DecisionRow, Health, ResearchResponse,
   Timeframe, WatchlistEntry,
 } from "./types";
+import type { BacktestRequest, BacktestResponse } from "./backtest";
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
@@ -56,4 +57,10 @@ export const api = {
         if (e instanceof SyntaxError) return null;
         throw e;
       }),
+
+  backtest: (body: BacktestRequest) =>
+    request<BacktestResponse>("/backtest", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };
