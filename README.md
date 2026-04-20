@@ -93,3 +93,27 @@ Scheduled jobs (IST, skipping weekends/holidays where appropriate):
 - **09:00–15:45 Mon-Fri, every 15 min** — lightweight watchlist poll (news + technical)
 
 The Macro agent is now wired into the Orchestrator for swing and long-term timeframes; intraday uses macro but skips fundamentals.
+
+## Full stack runbook (v0.5)
+
+Start both services:
+
+```bash
+# terminal 1 — backend
+cd backend && uv run qc serve
+
+# terminal 2 — frontend
+cd frontend && cp .env.local.example .env.local && pnpm install && pnpm dev
+```
+
+Open http://localhost:3000.
+
+Tabs:
+- **Research** — type a ticker, pick timeframe, run. Shows the verdict card, price chart with support/resistance, and expandable cards per specialist agent.
+- **Watchlist** — add / remove tickers. The backend's scheduled watchlist polling (every 15 min during market hours) runs a lightweight news + technical pass on each; full verdicts are created by explicit research runs.
+- **Decisions** — every research verdict is persisted. Forward returns (1d / 7d / 30d) fill in automatically as the nightly outcomes job runs.
+
+The header shows API status and today's LLM spend (₹ spent / daily cap).
+
+Frontend tests: `cd frontend && pnpm test`.
+Backend tests: `cd backend && uv run pytest -q`.
