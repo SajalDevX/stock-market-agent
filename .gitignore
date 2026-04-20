@@ -37,3 +37,6 @@ frontend/out/
 .idea/
 .vscode/
 *.swp
+
+# Runtime logs
+.logs/
